@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My 家計簿 App</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body { font-family: sans-serif; background: #f0f2f5; padding: 20px; max-width: 600px; margin: auto; }
+        .card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); margin-bottom: 20px; }
+        h1, h2 { color: #333; text-align: center; }
+        input, select, button { width: 100%; padding: 10px; margin: 10px 0; border-radius: 6px; border: 1px solid #ddd; box-sizing: border-box; }
+        button { background: #007bff; color: white; border: none; cursor: pointer; font-weight: bold; }
+        button:hover { background: #0056b3; }
+        .list-item { display: flex; justify-content: space-between; border-bottom: 1px solid #eee; padding: 8px 0; }
+    </style>
+</head>
+<body>
+
+    <h1>📊 家計簿ツール</h1>
+
+    <div class="card">
+        <h2>データを入力</h2>
+        <input type="date" id="date">
+        <input type="text" id="category" placeholder="カテゴリ（食費、交際費など）">
+        <input type="number" id="amount" placeholder="金額（円）">
+        <button onclick="addData()">保存する</button>
+    </div>
+
+    <div class="card">
+        <h2>支出の割合</h2>
+        <canvas id="myChart"></canvas>
+    </div>
+
+    <div class="card">
+        <h2>履歴</h2>
+        <div id="historyList"></div>
+        <button onclick="clearData()" style="background: #dc3545; font-size: 0.8em; margin-top: 20px;">データを全消去</button>
+    </div>
+
+    <script>
+        let myChart;
+        let records = JSON.parse(localStorage.getItem('kakeibo_data')) || [];
+
+        // 初期表示
+        window.onload = () => {
+            document.getElementById('date').valueAsDate = new Date();
+            updateUI();
+        };
+
+        // データ追加
+        function addData() {
+            const date = document.getElementById('date').value;
+            const category = document.getElementById('category').value;
+            const amount = parseInt(document.getElementById('amount').value);
+
+            if (!category || !amount) return alert("入力してください");
+
+            records.push({ date, category, amount });
+            localStorage.setItem('kakeibo_data', JSON.stringify(records));
+            
+            document.getElementById('category').value = '';
+            document.getElementById('amount').value = '';
+            updateUI();
+        }
+
+        // UIとグラフの更新
+        function updateUI() {
+            const list = document.getElementById('historyList');
+            list.innerHTML = '';
+            const summary = {};
+
+            // 履歴の作成と集計
+            records.slice().reverse().forEach(r => {
+                list.innerHTML += `<div class="list-item"><span>${r.date} [${r.category}]</span> <span>¥${r.amount.toLocaleString()}</span></div>`;
+                summary[r.category] = (summary[r.category] || 0) + r.amount;
+            });
+
+            // グラフの描画
+            const ctx = document.getElementById('myChart').getContext('2d');
+            if (myChart) myChart.destroy();
+            myChart = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: Object.keys(summary),
+                    datasets: [{
+                        data: Object.values(summary),
+                        backgroundColor: ['#ff6384', '#36a2eb', '#cc65fe', '#ffce56', '#4bc0c0']
+                    }]
+                }
+            });
+        }
+
+        function clearData() {
+            if(confirm("データをすべて消去しますか？")) {
+                localStorage.removeItem('kakeibo_data');
+                records = [];
+                updateUI();
+            }
+        }
+    </script>
+</body>
+</html>
